@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<title>JavaScript FileReader &amp; hexdump</title>
+	<style type="text/css">
+		#output dd {
+			font-family: monospace;
+			white-space: pre;
+		}
+	</style>
+	<script type="text/javascript">
+		function hexdump(u8) {
+			var hex = ['0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'];
+			var chr = new Array(256);
+			for (var i = 0; i < 256; ++i) {
+				if ((i & 0x7f) < 0x20 || i == 0x7f || i == 0xa0 || i == 0xad) {
+					chr[i] = ".";
+				} else {
+					chr[i] = String.fromCharCode(i);
+				}
+			}
+			var s = "";
+			var o_len = Math.max(u8.length.toString(16).length, 4);
+			for (var i = 0; i < u8.length;) {
+				var o = i.toString(16);
+				o = "0".repeat(o_len - o.length) + o + "  ";
+
+				var a1 = "", a2 = "", b1 = "", b2 = "";
+				for (var j = 0; j < 8 && i < u8.length; ++i, ++j) {
+					a1 += hex[u8[i] >> 4] + hex[u8[i] & 0xf] + " ";
+					b1 += chr[u8[i]];
+				}
+				for (var j = 0; j < 8 && i < u8.length; ++i, ++j) {
+					a2 += hex[u8[i] >> 4] + hex[u8[i] & 0xf] + " ";
+					b2 += chr[u8[i]];
+				}
+				var a = a1 + " " + a2;
+				a = a + " ".repeat(50 - a.length);
+
+				s += o + a + b1 + b2 + "\n";
+			}
+			return s;
+		}
+		function load(f) {
+			var dl = document.getElementById("output"), dt, dd_bar, dd_bytes, dd_data;
+			dl.appendChild(dt = document.createElement("dt"));
+			dl.appendChild(dd_bar = document.createElement("dd"));
+			dl.appendChild(dd_bytes = document.createElement("dd"));
+			dl.appendChild(dd_data = document.createElement("dd"));
+			dt.textContent = f.name;
+			dd_bar.textContent = "[LOADING]";
+			dd_bytes.textContent = "? / ? bytes";
+			dd_data.textContent = "";
+
+			var reader = new FileReader();
+			reader.onprogress = function(e) {
+				var x = Math.round(20 * e.loaded / e.total);
+				dd_bar.textContent = "[" + "#".repeat(x) + ".".repeat(20-x) + "]";
+				dd_bytes.textContent = e.loaded + " / " + e.total + " bytes";
+			};
+			reader.onload = function() {
+				dd_bar.textContent = "READY";
+				dd_data.textContent = hexdump(new Uint8Array(this.result));
+			};
+			reader.onerror = function() {
+				dd_bar.textContent = "ERROR";
+			};
+			reader.onabort = function() {
+				dd_bar.textContent = "ABORTED";
+			};
+			reader.readAsArrayBuffer(f);
+		}
+		function handle(files) {
+			for (var i = 0; i < files.length; ++i) {
+				load(files[i]);
+			}
+		}
+	</script>
+</head>
+<body>
+	<h1>JavaScript FileReader &amp; hexdump</h1>
+	<p><input type="file" multiple="multiple" onchange="handle(this.files)" /></p>
+	<dl id="output"></dl>
+</body>
+</html>
