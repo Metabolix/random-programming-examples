@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<title>JS-raycaster</title>
+	<script type='text/javascript' src='util.js'></script>
+	<script type='text/javascript' src='timer.js'></script>
+	<script type='text/javascript' src='input.js'></script>
+	<script type='text/javascript' src='level.js'></script>
+	<script type='text/javascript' src='players.js'></script>
+	<script type='text/javascript' src='balls.js'></script>
+	<script type='text/javascript' src='explosions.js'></script>
+	<script type='text/javascript' src='graphics.js'></script>
+	<script type='text/javascript' src='localserver.js'></script>
+	<script type='text/javascript' src='remoteserver.js'></script>
+	<script type='text/javascript' src='main.js'></script>
+	<style type="text/css">
+		img {
+			width: 32px;
+			height: 32px;
+		}
+		dt {
+			float: left;
+			width: 2em;
+		}
+		details {
+			margin-top: 1em;
+		}
+		summary {
+			cursor: pointer;
+		}
+		details::open {
+			background-color: rgba(128, 255, 128, 0.1);
+		}
+		details::open summary {
+			text-shadow: green 0 0 0.3em;
+		}
+		#preload {
+			width: 1px; height: 1px; overflow: hidden;
+		}
+	</style>
+</head>
+<body>
+	<h1>JS-raycaster</h1>
+	<p>27.09.2010; WebSocket päivitetty 2024.</p>
+	<noscript>
+		Tämä sivu vaatii JavaScriptin.
+	</noscript>
+	<div>
+		<canvas id="canvas" width="320" height="240" tabindex="-1">
+			Tämä sivu vaatii tuen HTML5:n canvas-elementille.
+		</canvas>
+		<canvas id="mapCanvas" width="96" height="96"></canvas>
+	</div>
+	<div>
+		Ohjaus: nuolet tai WASD. Space tai control ampuu. FPS: <span id="fps">?</span>
+	</div>
+	<p>Lisää delay: <input id="delay" type="number" size="5" value="25" min="0" max="100" /> <button>OK</button></p>
+	<p><input type="checkbox" id="texture" checked="checked" /> <label for="texture">Teksturoi</label></p>
+	<p><input type="checkbox" id="shadow" checked="checked" /> <label for="shadow">Varjosta</label></p>
+	<p><input type="checkbox" id="map" checked="checked" /> <label for="map">Päivitä karttaa</label></p>
+	<details id="sp" open="open">
+		<summary>Yksinpeli</summary>
+		<fieldset>
+		<div><button id="spStart">Aloita (päivitä taso)</button></div>
+		<div>
+			<textarea id="spLevel" rows="10" cols="80">
+AAAAAAAAAAAAAAAAAAAAA
+A  BBBBB            A
+A  BX  B   A   A    A
+A  B       A   AC  CC
+A  B XBB     AAAC  C
+A        B B  AAC  C
+A      C  B    AC CC
+A      C   B    C CC
+A                  B
+A  AA  CC CCC   CCCC
+A  A      C    AC
+A  AAAAA  C AA A
+A  A        A  A
+A  A AAAAAA A  A
+A              A
+AAAAAAAAAAAAAAAA
+</textarea>
+		</div>
+		<dl id="imgLevel">
+			<dt>A</dt>
+			<dd><img src="A.png" title="A" alt="#a30" /></dd>
+			<dt>B</dt>
+			<dd><img src="B.png" title="B" alt="#ea7" /></dd>
+			<dt>C</dt>
+			<dd><img src="C.png" title="C" alt="#d53" /></dd>
+			<dt>X</dt>
+			<dd>Lähtöpaikka</dd>
+		</dl>
+		</fieldset>
+	</details>
+	<details id="mp">
+		<summary>Verkkopeli</summary>
+		<fieldset>
+		<p>Huomio, verkkopeli vaatii erillisen palvelimen, katso <a href="server.py">server.py</a>.</p>
+		<input id="mpName" title="Nimimerkki" value="Nimimerkki" />
+		<input id="mpAddress" title="WebSocket-osoite" value="server.websocket" />
+		<button id="mpConnect">Yhdistä</button>
+		<button id="mpDisconnect">Katkaise</button>
+		</fieldset>
+	</details>
+	<div id="preload">
+		<table id="imgPlayer">
+			<tr><td><img src="player.png" alt="" /></td></tr>
+		</table>
+		<p id="imgBall">
+			<img src="ball.png" alt="" />
+		</p>
+		<p id="imgExplosion">
+			<img src="explosion.png" alt="" />
+		</p>
+	</div>
+</body>
+</html>
