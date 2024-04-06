@@ -1,0 +1,49 @@
+# Asetustiedosto
+# ==============
+# Ohjelma tallentaa napit tiedostoon. Asetustiedoston nimen voi antaa
+# komentoriviparametrina. Nyt nimi on piano.txt. Tiedoston jokainen
+# rivi kertoo yhden napin koodin ja korkeuden puoliaskelina a1:sta laskien.
+# Tiedostoa ei kannata muokata itse! Kun sopivat napit on asetettu, tiedoston
+# voi varmuuden vuoksi asettaa vain luku -tilaan.
+
+39	6
+43	16
+44	0
+45	3
+46	2
+49	-1
+50	1
+52	4
+53	6
+55	9
+56	11
+57	13
+60	-14
+97	-13
+98	-5
+99	-9
+101	3
+102	-8
+103	-6
+105	12
+106	-3
+107	-1
+108	1
+109	-2
+110	-4
+111	14
+112	15
+113	0
+114	5
+115	-11
+116	7
+117	10
+118	-7
+119	2
+120	-10
+121	8
+122	-12
+228	4
+229	17
+303	5
+314	18

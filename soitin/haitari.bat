@@ -1,0 +1,1 @@
+soitin.exe haitari.txt

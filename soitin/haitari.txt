@@ -1,0 +1,63 @@
+# Asetustiedosto
+# ==============
+# Ohjelma tallentaa napit tiedostoon. Asetustiedoston nimen voi antaa
+# komentoriviparametrina. Nyt nimi on haitari.txt. Tiedoston jokainen
+# rivi kertoo yhden napin koodin ja korkeuden puoliaskelina a1:sta laskien.
+# Tiedostoa ei kannata muokata itse! Kun sopivat napit on asetettu, tiedoston
+# voi varmuuden vuoksi asettaa vain luku -tilaan.
+
+43	14
+44	11
+45	17
+46	14
+48	11
+49	-16
+50	-13
+51	-10
+52	-7
+53	-4
+54	-1
+55	2
+56	5
+57	8
+97	-12
+98	2
+99	-4
+100	-6
+101	-8
+102	-3
+103	0
+104	3
+105	7
+106	6
+107	9
+108	12
+109	8
+110	5
+111	10
+112	13
+113	-14
+114	-5
+115	-9
+116	-2
+117	4
+118	-1
+119	-11
+120	-7
+121	1
+122	-10
+228	18
+229	16
+246	15
+282	-18
+283	-15
+284	-12
+285	-9
+286	-6
+287	-3
+288	0
+289	3
+290	6
+291	9
+292	12
+303	20
