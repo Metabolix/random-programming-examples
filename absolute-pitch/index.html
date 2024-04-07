@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Absolute Pitch</title>
+
+<style>
+body {
+    font-family: sans-serif;
+    text-align: center;
+}
+table {
+    border-collapse: collapse;
+    margin: 1em auto;
+}
+th, td {
+    border: 1px solid black;
+    padding: 0.2em;
+    text-align: center;
+    min-width: 1.5em;
+}
+th {
+    background-color: #eee;
+    cursor: pointer;
+}
+td {
+    background-color: #fff;
+    transition: background-color 2s;
+}
+.correct {
+    background-color: rgb(35, 168, 75);
+    transition: background-color 0.05s;
+}
+.incorrect {
+    background-color: rgb(228, 123, 25);
+    transition: background-color 0.05s;
+}
+table:not(.waiting-input) th {
+    cursor: wait;
+}
+</style>
+
+<body>
+<h1>Absolute Pitch</h1>
+<p>This is a small program for training pitch memory, absolute pitch identification or something such. Note names are chosen to avoid any H/B/B♭ confusion.</p>
+<p><button id="start">Start</button> <button id="skip">Skip</button></p>
+<p id="info">Click to start.</p>
+<table id="stats"></table>
+<p>Skipped: <span id="skipped">0</span></p>
+
+<script>
+const notes = ["a", "a♯", "c♭", "c", "c♯", "d", "e♭", "e", "f", "f♯", "g", "a♭"];
+
+class AudioDevice {
+    constructor() {
+        this.rate = 48000;
+    }
+    async play(wav) {
+        const blob = new Blob([wav], {type: "audio/wav"});
+        let url = URL.createObjectURL(blob);
+        let audio = new Audio();
+        audio.src = url;
+        audio.play();
+        await new Promise(resolve => audio.onended = resolve);
+        URL.revokeObjectURL(url);
+    }
+}
+
+function generate_wav(p_min, p_max, rate) {
+    let angle = 0;
+    function floatsample(dt, p) {
+        const frequency = 440 * Math.pow(2, p / 12);
+        angle += 2 * Math.PI * dt * frequency;
+        return Math.sin(angle) + 0.03 * Math.sin(angle * 2) + 0.01 * Math.sin(angle * 4);
+    }
+    function bytesample(f) {
+        return (0x80 + Math.floor(127 * f)) & 0xff;
+    }
+
+    let p0 = Math.floor(Math.random() * (p_max - p_min + 1) + p_min);
+    const data = new Array(44).fill(0);
+    for (let i = 0; i < rate / 10; i++) {
+        data.push(bytesample(floatsample(1 / rate, p0) * i / (rate / 10)));
+    }
+    for (let i = 0; i < 20; i++) {
+        const p1 = Math.floor(Math.random() * (p_max - p_min + 1) + p_min);
+        const change_length = rate / Math.floor(Math.random() * 9 + 2);
+        for (let i = 0; i < change_length; i++) {
+            data.push(bytesample(floatsample(1 / rate, p0 + (p1 - p0) * i / change_length)));
+        }
+        p0 = p1;
+    }
+    for (let i = 0; i < rate * 2; i++) {
+        data.push(bytesample(floatsample(1 / rate, p0)));
+    }
+    for (let i = 0; i < rate / 10; i++) {
+        data.push(bytesample(floatsample(1 / rate, p0) * (1 - i / (rate / 10))));
+    }
+    for (let i = 0; i < 8 * rate / 10; i++) {
+        data.push(bytesample(0));
+    }
+    const wav = new Uint8Array(data);
+    const dv = new DataView(wav.buffer);
+    dv.setUint32(0, 0x46464952, true);
+    dv.setUint32(4, wav.byteLength - 8, true);
+    dv.setUint32(8, 0x45564157, true);
+    dv.setUint32(12, 0x20746d66, true);
+    dv.setUint32(16, 16, true);
+    dv.setUint16(20, 1, true);
+    dv.setUint16(22, 1, true);
+    dv.setUint32(24, rate, true);
+    dv.setUint32(28, rate, true);
+    dv.setUint16(32, 1, true);
+    dv.setUint16(34, 8, true);
+    dv.setUint32(36, 0x61746164, true);
+    dv.setUint32(40, wav.byteLength - 44, true);
+    return [p0, wav];
+}
+
+let resolve_click = () => {};
+
+async function waiting_input(stats) {
+    let ret = await new Promise(resolve => {
+        resolve_click = resolve;
+        stats.classList.add("waiting-input");
+    });
+    stats.classList.remove("waiting-input");
+    return ret;
+}
+
+function click_handler(event) {
+    resolve_click(this.textContent);
+}
+
+function init_stats(stat_cells) {
+    const stats = document.getElementById("stats");
+    if (stats.rows.length === 0) {
+        for (let offset = 6; offset >= -6; --offset) {
+            const is_header = offset === 6;
+            const row = stats.insertRow();
+            row.appendChild(document.createElement("th"));
+            if (is_header) {
+                notes.forEach(note => {
+                    const cell = row.appendChild(document.createElement("th"));
+                    cell.textContent = note;
+                    cell.onclick = click_handler;
+                });
+            } else {
+                row.cells[0].textContent = offset;
+                notes.forEach(note => stat_cells[`${note}:${offset}`] = row.insertCell());
+            }
+        }
+    }
+}
+
+async function main() {
+    const audio_device = new AudioDevice();
+    const info = document.getElementById("info");
+
+    const stat_cells = {};
+    init_stats(stat_cells);
+    const p_min = -16;
+    const p_max = p_min - 1 + 12 * 2;
+    info.textContent = "Listen closely.";
+    while (true) {
+        const [pitch, samples] = generate_wav(p_min, p_max, audio_device.rate);
+        const correct = (pitch + 120000) % 12;
+        const note = notes[correct];
+        await audio_device.play(samples);
+        info.textContent = "Choose a note.";
+        const answer_str = await waiting_input(stats);
+        if (answer_str === "skip") {
+            skipped.textContent = 1 + (+skipped.textContent);
+            continue;
+        }
+        const answer = notes.indexOf(answer_str);
+        const offset = ((answer - correct + 120006) % 12) - 6;
+        console.log([answer_str, offset, correct, notes[correct]].join(" "));
+        const cell = stat_cells[`${note}:${offset}`];
+        cell.textContent = 1 + (+cell.textContent);
+        cell.classList.add(offset === 0 ? "correct" : "incorrect");
+        setTimeout(() => cell.classList.remove("correct", "incorrect"), 100);
+        info.textContent = offset ? `${offset} semitones off, correct = ${notes[correct % 12]}` : "OK";
+    }
+}
+
+document.getElementById("start").onclick = function() {
+    this.remove();
+    main();
+};
+
+document.getElementById("skip").onclick = function() {
+    resolve_click("skip");
+};
+</script>
