@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<title>Pankkiviivakoodi</title>
+	<script>
+		function tarkasta_kerroin_137(num) {
+			return num.match(/./g).reverse().reduce((a, b, i) => a + ((+b) * [1, 7, 3][i % 3]), 0) % 10 == 0;
+		}
+
+		function tarkasta_mod_97_10(num) {
+			return BigInt(num.substr(4) + num.substr(0, 4).replace(/[A-Z]/g, c => c.charCodeAt(0) - 55)) % 97n == 1n;
+		}
+
+		function tarkista_tilinumero(tili) {
+			let tiliStr = tili.toUpperCase().replace(/\s/g, "");
+			if (!tiliStr.match(/^[ABCDEFGHIJKLMNOPQRSTUVWXYZ]{2}[0123456789]{16}$/)) {
+				throw new Error("Tilinumero ei ole IBAN-muotoinen");
+			}
+			if (!tarkasta_mod_97_10(tiliStr)) {
+				throw new Error("Tilinumero ei ole kelvollinen (väärä tarkistusluku)");
+			}
+			if (!tiliStr.startsWith("FI")) {
+				throw new Error("Tilinumero ei ole suomalainen");
+			}
+			return tiliStr.substr(2);
+		}
+
+		function tarkista_summa(summa) {
+			let summaArr = summa.replace(/\s|'/g, "").replace(/,/g, ".").split(".");
+			if (summaArr.length > 2) {
+				throw new Error("Summassa voi olla vain yksi desimaalierotin");
+			}
+			let e = (summaArr[0] || "0").replace(/^\+?0*/, "").padStart(6, "0");
+			let c = (summaArr[1] || "0").replace(/0*$/, "").padEnd(2, "0");
+			let summaStr = e + c;
+			if (summaStr.match(/[^0123456789]/)) {
+				throw new Error("Summassa voi olla vain numeroita");
+			}
+			if (e.length > 6) {
+				throw new Error("Summa voi olla enintään 999999,99 euroa");
+			}
+			if (c.length > 2) {
+				throw new Error("Summassa voi olla korkeintaan kaksi desimaalia");
+			}
+			return summaStr;
+		}
+
+		function tarkista_viite(viite) {
+			let viiteStr = viite.toUpperCase().replace(/\s/g, "") || "0";
+			if (!viiteStr.match(/^RF[0123456789]{2}/)) {
+				if (!viiteStr.match(/^[0123456789]{1,20}$/g)) {
+					throw new Error("Viitenumeron tulee olla suomalainen tai RF-viite");
+				}
+				if (!tarkasta_kerroin_137(viiteStr)) {
+					throw new Error("Viitenumeron tarkistusluku on väärä");
+				}
+				return viiteStr.padStart(23, "0");
+			}
+			if (!viiteStr.match(/^RF[0123456789]{2,23}$/g)) {
+				throw new Error("Viivakoodin RF-viitteessä tulee olla 2–23 numeroa");
+			}
+			if (!tarkasta_mod_97_10(viiteStr)) {
+				throw new Error("RF-viitteen tarkistusluku on väärä");
+			}
+			return viiteStr.substr(2, 2) + viiteStr.substr(4).padStart(21, "0");
+		}
+
+		function tarkista_erapaiva(erapaiva) {
+			let m = erapaiva.match(/^\d\d(\d\d)-(\d\d)-(\d\d)$/);
+			let erapaivaStr = m ? m[1] + m[2] + m[3] : "";
+			if (erapaivaStr.length != 6) {
+				throw new Error("Eräpäivä on väärän muotoinen, syötä päivämäärä muodossa YYYY-MM-DD");
+			}
+			return erapaivaStr;
+		}
+
+		function encode_Code_128C(s) {
+			if (!s.match(/^([0-9][0-9])+$/)) {
+				throw new Error("Viivakoodin tulee sisältää parillinen määrä numeroita");
+			}
+			let symbols = [105, ...s.match(/\d\d/g).map(c => parseInt(c))];
+			let checksum = symbols.reduce((a, b, i) => a + b * (i || 1), 0) % 103;
+			symbols.push(checksum);
+			symbols.push(106);
+			const widths = [212222, 222122, 222221, 121223, 121322, 131222, 122213, 122312, 132212, 221213, 221312, 231212, 112232, 122132, 122231, 113222, 123122, 123221, 223211, 221132, 221231, 213212, 223112, 312131, 311222, 321122, 321221, 312212, 322112, 322211, 212123, 212321, 232121, 111323, 131123, 131321, 112313, 132113, 132311, 211313, 231113, 231311, 112133, 112331, 132131, 113123, 113321, 133121, 313121, 211331, 231131, 213113, 213311, 213131, 311123, 311321, 331121, 312113, 312311, 332111, 314111, 221411, 431111, 111224, 111422, 121124, 121421, 141122, 141221, 112214, 112412, 122114, 122411, 142112, 142211, 241211, 221114, 413111, 241112, 134111, 111242, 121142, 121241, 114212, 124112, 124211, 411212, 421112, 421211, 212141, 214121, 412121, 111143, 111341, 131141, 114113, 114311, 411113, 411311, 113141, 114131, 311141, 411131, 211412, 211214, 211232, 2331112];
+			return symbols.map(s => "" + widths[s]).join("");
+		}
+
+		document.addEventListener("DOMContentLoaded", function() {
+			let form = document.querySelector("form");
+			let tilinumero = document.getElementById("tilinumero");
+			let viite = document.getElementById("viite");
+			let summa = document.getElementById("summa");
+			let erapaiva = document.getElementById("erapaiva");
+			let tiedot = document.getElementById("tiedot");
+			let viivakoodiTxt = document.getElementById("viivakoodi-txt");
+			let viivakoodiSvg = document.getElementById("viivakoodi-svg");
+
+			if (!erapaiva.value) {
+				erapaiva.value = new Date().toISOString().slice(0, 10);
+			}
+
+			function tee_viivakoodi() {
+				tiedot.textContent = "";
+				viivakoodiTxt.textContent = "";
+				viivakoodiSvg.innerHTML = "";
+
+				function tarkista(input, funktio) {
+					let e;
+					try {
+						input.setCustomValidity("");
+						return funktio(input.value);
+					} catch (e) {
+						input.setCustomValidity(e.message);
+						tiedot.textContent += e.message + "\n";
+					}
+				}
+
+				let koodi = [
+					viite.value.match(/RF/) ? "5" : "4",
+					tarkista(tilinumero, tarkista_tilinumero),
+					tarkista(summa, tarkista_summa),
+					tarkista(viite, tarkista_viite),
+					tarkista(erapaiva, tarkista_erapaiva),
+				].join("");
+
+				if (!koodi.match(/^[0-9]{54}$/)) {
+					return;
+				}
+
+				let purku = koodi.replace(/([45])(\d{16})(\d{8})(\d{23})(\d{6})/, (_, versio, tilinumero, summa, viite, erapaiva) => {
+					tilinumero = "FI" + tilinumero;
+					summa = summa.replace(/0*(\d+)(\d{2})/, "$1,$2");
+					viite_rf = "RF" + viite.substr(0, 2) + viite.substr(2).replace(/^0*/, "");
+					viite_fi = viite.replace(/^0*/, "");
+					viite = versio == 4 ? viite_fi : viite_rf;
+					cc = new Date().getFullYear() / 100 | 0;
+					erapaiva = erapaiva.replace(/(\d{2})(\d{2})(\d{2})/, cc + "$1-$2-$3");
+					return `Tili: ${tilinumero}\nSumma: ${summa} euroa\nViite: ${viite}\nEräpäivä: ${erapaiva}`;
+				});
+
+				tiedot.textContent = purku;
+				viivakoodiTxt.textContent = koodi;
+
+				let w = 0, h = 40;
+				let svg = encode_Code_128C(koodi).match(/[0-9]/g).map((bar_width, i) => {
+					let x = w;
+					w += +bar_width;
+					return (i % 2) ? "" : `<rect x='${x}' y='0' width='${bar_width}' height='${h}' fill='black'/>\n`;
+				}).join("");
+
+				viivakoodiSvg.innerHTML = `
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						viewBox="0 0 ${w} ${h}"
+						style='margin: 1em 0 1em; min-width: ${w}px; width: 40em; max-width: 100%;'
+					>
+						${svg}
+					</svg>
+				`;
+			}
+
+			tilinumero.addEventListener("input", tee_viivakoodi);
+			viite.addEventListener("input", tee_viivakoodi);
+			summa.addEventListener("input", tee_viivakoodi);
+			erapaiva.addEventListener("input", tee_viivakoodi);
+			tee_viivakoodi();
+		});
+	</script>
+</head>
+<body>
+	<h1>Pankkiviivakoodi</h1>
+	<form>
+	<dl>
+		<dt>Saajan tilinumero</dt>
+		<dd><input type="text" id="tilinumero" required /></dd>
+		<dt>Viite</dt>
+		<dd><input type="text" id="viite" /></dd>
+		<dt>Summa</dt>
+		<dd><input type="text" id="summa" /></dd>
+		<dt>Eräpäivä</dt>
+		<dd><input type="date" id="erapaiva" /></dd>
+	</dl>
+	</form>
+	<dl>
+		<dt>Tulos</dt>
+		<dd id="tiedot" style="white-space: pre-wrap; margin-bottom: 1em;"></dd>
+		<dd id="viivakoodi-txt" style="margin-bottom: 1em;"></dd>
+		<dd id="viivakoodi-svg"></dd>
+	</dl>
+</body>
+</html>
